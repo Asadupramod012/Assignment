@@ -6,13 +6,13 @@ from django.db import models
 class Classes(models.Model):
     class_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100)
-    start_date = models.DateTimeField()
+    start_date = models.DateTimeField(auto_now_add=True)
     instructor = models.CharField(max_length=100)
     total_slots = models.IntegerField(default=10)
     available_slots = models.IntegerField(default=10)
 
     def __str__(self):
-        return f"{self.name} ({self.start_date})"
+        return f"{self.name}"
 
 class Booking(models.Model):
     booking_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

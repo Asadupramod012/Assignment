@@ -1,3 +1,4 @@
+from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework import viewsets
 from rest_framework.response import Response
@@ -6,44 +7,42 @@ from django.http import HttpResponse
 from django.utils.timezone import now
 from zoneinfo import ZoneInfo
 from .models import Classes, Booking
-from .serializers import BookingInputSerializer, ClassesSerializer, BookingSerializer
+from .serializers import ClassesSerializer, BookingSerializer
 
 # Create your views here.
 
 class ClassListView(APIView):
     def get(self, request):
-        tz_param = request.GET.get("timezone", "Asia/Kolkata")
-        classes = Classes.objects.filter(start_date__gte=now())
-        serializer = ClassesSerializer(classes, many=True)
-        data = serializer.data
-
-        for cls in data:
-            original_class = Classes.objects.get(class_id=cls['class_id'])
-            utc_time = original_class.start_date  # assumed to be in UTC
-            local_time = utc_time.astimezone(ZoneInfo(tz_param))  # Convert to requested timezone
-            cls['start_date'] = local_time.isoformat()
-
+        classes = Classes.objects.all() #fetching the all classes from db
+        serializer = ClassesSerializer(classes, many=True) # converting into JSON
+        data = serializer.data # which is the data 
+        
         return Response(data)
 
-    def post(self, request):
-        serializer = ClassesSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(
-                available_slots=serializer.validated_data['total_slots']  # sync available with total initially
-            )
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    # def post(self, request):
+    #     serializer = ClassesSerializer(data=request.data)
+    #     if serializer.is_valid():
+    #         serializer.save(
+    #             available_slots=serializer.validated_data['total_slots']
+    #         )
+    #         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 class BookClassView(APIView):
             
     def post(self, request):
-        serializer = BookingInputSerializer(data=request.data)
+        serializer = BookingSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        class_id = serializer.validated_data['class_id']
         name = serializer.validated_data['client_name']
         email = serializer.validated_data['client_email']
+        
+        class_id = request.data.get("class_id")
+
+        # Fix starts here
+        if hasattr(class_id, 'class_id'):
+            class_id = str(class_id.class_id)
 
         try:
             fitness_class = Classes.objects.get(class_id=class_id)
@@ -68,7 +67,7 @@ class BookingListView(APIView):
         bookings = Booking.objects.filter(client_email=email)
         if not bookings.exists():
             return Response({
-                "message": "No bookings found. Make sure the email is correct and avoid trailing slashes (e.g., use /bookings?email=abc@example.com)"
+                "message": "There is No bookings on this email (or) Dear user, plesae remove the slash after email ..."
             }, status=status.HTTP_404_NOT_FOUND)
 
         serializer = BookingSerializer(bookings, many=True)
@@ -76,7 +75,7 @@ class BookingListView(APIView):
 
 
 
-# ----------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------
 
 def home_view(request):
     html = """
@@ -87,7 +86,7 @@ def home_view(request):
                 body {
                     font-family: Arial, sans-serif;
                     padding: 40px;
-                    background-color: #e6f2ff;  /* gentle light blue */
+                    background-color: #e6f2ff;
                     color: #2c3e50;
                 }
                 h1 {

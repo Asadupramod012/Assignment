@@ -12,7 +12,3 @@ class BookingSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class BookingInputSerializer(serializers.Serializer):
-    class_id = serializers.UUIDField()
-    client_name = serializers.CharField(max_length=100)
-    client_email = serializers.EmailField()
